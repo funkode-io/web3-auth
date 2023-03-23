@@ -1,0 +1,41 @@
+name: Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      isSnapshot:
+        required: true
+        type: boolean
+  workflow_call:
+    inputs:
+      isSnapshot:
+        required: true
+        type: boolean
+
+jobs:
+  nexus:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - run: |
+          git fetch --prune --unshallow --tags -f
+          rm -rf .git/hooks/pre-push
+      - uses: olafurpg/setup-scala@v13
+        with:
+          java-version: temurin@17.0.5=tgz+https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.5%2B8/OpenJDK17U-jdk_x64_linux_hotspot_17.0.5_8.tar.gz
+      - name: run ci-release
+        run: |
+          if [[ ${{ inputs.isSnapshot }} == false ]]
+          then
+            head_commit_tag=$(git tag --points-at HEAD)
+            echo "Head commit tag is: $head_commit_tag"
+            GITHUB_REF="refs/tags/$(git tag --points-at HEAD)"
+            echo "GITHUB_REF is: $GITHUB_REF"
+          fi
+          echo "GITHUB_REF is: $GITHUB_REF"
+          sbt ci-release
+        env:
+          PGP_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.GPG_KEY }}
+          SONATYPE_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.NEXUS_USER }}

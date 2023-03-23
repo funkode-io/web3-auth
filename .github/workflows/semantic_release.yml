@@ -1,0 +1,47 @@
+name: 'Semantic Release'
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        type: boolean
+        required: true
+      branch:
+        type: choice
+        required: true
+        options:
+          - develop
+          - main
+
+  workflow_call:
+    inputs:
+      dry_run:
+        required: true
+        type: boolean
+      branch:
+        required: true
+        type: string
+
+jobs:
+  github:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - run: |
+          git fetch --prune --unshallow --tags -f
+          rm -rf .git/hooks/pre-push
+      - name: Bump version and push tag
+        id: semantic
+        uses: cycjimmy/semantic-release-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          branch: ${{ inputs.branch }}
+          dry_run: ${{ inputs.dry_run }}
+      - run: echo "$OUTPUTS"
+        env:
+          OUTPUTS: ${{ toJson(steps.semantic.outputs) }}
+    outputs:
+      version: ${{ steps.semantic.outputs.new_release_version }}
+      published: ${{ steps.semantic.outputs.new_release_published }}
