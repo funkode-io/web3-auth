@@ -14,13 +14,15 @@ inThisBuild(
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
     scalafixDependencies += "com.github.liancheng" %% "organize-imports" % "0.6.0",
+    sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
     startYear := Some(2023),
     licenses += ("MIT", new URL("https://opensource.org/licenses/MIT")),
-    homepage := Some(url("https://github.com/carlos-verdes/web3-auth")),
+    homepage := Some(url("https://github.com/funkode-io/web3-auth")),
     scmInfo := Some(
       ScmInfo(
-        url("https://github.com/carlos-verdes/web3-auth"),
-        "git@github.com:carlos-verdes/web3-auth.git"
+        url("https://github.com/funkode-io/web3-auth"),
+        "git@github.com:funkode-io/web3-auth.git"
       )
     ),
     developers := List(
