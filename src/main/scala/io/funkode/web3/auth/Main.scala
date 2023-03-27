@@ -10,4 +10,6 @@ import zio.*
 
 object Main extends ZIOAppDefault:
 
+  // $COVERAGE-OFF$
   override val run = ZIO.succeed(println("Hello Carlos Verdes"))
+  // $COVERAGE-ON$
