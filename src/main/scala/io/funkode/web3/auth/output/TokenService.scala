@@ -16,7 +16,7 @@ type TokenIO[R] = IO[TokenError, R]
 trait TokenService:
 
   def createToken(subject: Subject): TokenIO[Token]
-  def getClaims(token: Token): TokenIO[Claims]
+  def parseToken(token: Token): TokenIO[Claims]
 
 object TokenService:
 
@@ -27,4 +27,4 @@ object TokenService:
 
   def createToken(subject: Subject): WithTokenService[Token] = withTokenService(_.createToken(subject))
 
-  def getClaims(token: Token): WithTokenService[Claims] = withTokenService(_.getClaims(token))
+  def parseToken(token: Token): WithTokenService[Claims] = withTokenService(_.parseToken(token))

@@ -23,8 +23,8 @@ object Web3Service:
   inline def withWeb3Service(f: Web3Service => Web3UIO): WithWeb3 =
     ZIO.service[Web3Service].flatMap(f)
 
-  def validateWallet(wallet: Wallet): WithWeb3 =
+  inline def validateWallet(wallet: Wallet): WithWeb3 =
     withWeb3Service(_.validateWallet(wallet))
 
-  def validateSignature(wallet: Wallet, message: Message, signature: Signature): WithWeb3 =
+  inline def validateSignature(wallet: Wallet, message: Message, signature: Signature): WithWeb3 =
     withWeb3Service(_.validateSignature(wallet, message, signature))

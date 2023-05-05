@@ -40,9 +40,9 @@ trait CryptoExamples:
   val wrongAddress = WalletAddress("ef678007d18427e6022059dbc264f27507cd1ffa")
   val wrongWallet = Wallet(wrongAddress)
 
-object Web3ServiceSpec extends ZIOSpecDefault with CryptoExamples:
+object EvmWeb3ProviderSpec extends ZIOSpecDefault with CryptoExamples:
   override def spec: Spec[TestEnvironment, Any] =
-    suite("Web3 service should")(
+    suite("Evm Web3 provider should")(
       test("Validate wallet") {
         for
           validAddressNoChecksum <- Web3Service.validateWallet(wallet1).flip

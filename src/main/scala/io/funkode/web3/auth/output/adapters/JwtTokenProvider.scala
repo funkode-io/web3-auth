@@ -7,21 +7,28 @@
 package io.funkode.web3.auth.output
 package adapters
 
-import pdi.jwt.*
+import java.time.Instant
+
+import pdi.jwt.{JwtAlgorithm, JwtClaim, JwtZIOJson}
 import zio.*
 
 import io.funkode.web3.auth.model.*
 
 class JwtTokenProvider(config: JwtConfig) extends TokenService:
-  def createToken(subject: Subject): TokenIO[Token] =
-    ZIO.succeed(Token(Jwt.encode(s"""{"sub": "${subject.unwrap}"}""", config.secret, JwtAlgorithm.HS256)))
 
-  def getClaims(token: Token): TokenIO[Claims] =
+  def createToken(subject: Subject): TokenIO[Token] =
+    val claim = JwtClaim(
+      subject = Some(subject.toString),
+      issuedAt = Some(Instant.now.getEpochSecond)
+    )
+    ZIO.succeed(Token(JwtZIOJson.encode(claim, config.signingKey, JwtAlgorithm.HS256)))
+
+  def parseToken(token: Token): TokenIO[Claims] =
     for
       decoded <- ZIO
-        .fromTry(Jwt.decode(token.unwrap, config.secret, Seq(JwtAlgorithm.HS256)))
-        .mapError(e => TokenError.WrongTokenFormat("Error parsing token", e))
-      subject <- ZIO.fromOption(decoded.subject).orElseFail(TokenError.MissingSubject)
+        .fromTry(JwtZIOJson.decode(token.unwrap, config.signingKey, Seq(JwtAlgorithm.HS256)))
+        .mapError(e => TokenError.WrongTokenFormat(token, e))
+      subject <- ZIO.fromOption(decoded.subject).orElseFail(TokenError.MissingSubject(token))
     yield Claims(Subject(subject), decoded.issuedAt)
 
 object JwtTokenProvider:

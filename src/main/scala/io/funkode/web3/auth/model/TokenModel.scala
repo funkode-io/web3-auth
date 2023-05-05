@@ -9,9 +9,10 @@ package io.funkode.web3.auth.model
 enum TokenType:
   case Jwt
 
-case class Token(value: String, tokenType: TokenType = TokenType.Jwt)
+case class Token(value: String, tokenType: TokenType)
 object Token:
-  def apply(value: String): Token = Token(value)
+
+  def apply(value: String): Token = Token(value, TokenType.Jwt)
   extension (token: Token) def unwrap: String = token.value
 
 opaque type Subject = String
