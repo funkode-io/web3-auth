@@ -10,7 +10,7 @@ import zio.config.*
 import zio.config.magnolia.*
 import zio.config.typesafe.*
 
-case class JwtConfig(secret: String)
+case class JwtConfig(signingKey: String)
 
 object JwtConfig:
 

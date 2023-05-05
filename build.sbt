@@ -61,10 +61,9 @@ lazy val root =
       name := "web3-auth",
       libraryDependencies ++= Seq(zioResource, zioSlf4j2Log, jwtZioJson, web3j) ++ testLibs,
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
-      headerLicense := Some(HeaderLicense.MIT("2023", "Carlos Verdes", HeaderLicenseStyle.SpdxSyntax))
+      headerLicense := Some(HeaderLicense.MIT("2023", "Carlos Verdes", HeaderLicenseStyle.SpdxSyntax)),
+      coverageExcludedPackages := ".*Main.*"
     ).enablePlugins(AutomateHeaderPlugin)
-
-ThisBuild / coverageExcludedFiles := ".*Main.*;"
 
 addCommandAlias("ll", "projects")
 addCommandAlias("checkFmtAll", ";scalafmtSbtCheck;scalafmtCheckAll")
