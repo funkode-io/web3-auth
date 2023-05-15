@@ -8,7 +8,7 @@ package io.funkode.web3.auth
 package input
 
 import io.lemonlabs.uri.Urn
-import zio.IO
+import zio.*
 
 import io.funkode.web3.auth.model.*
 
@@ -20,3 +20,18 @@ trait AuthenticationService:
   def createChallengeMessage(wallet: Wallet): AuthIO[Message]
   def login(wallet: Wallet, challengeMessage: Message, signature: Signature): AuthIO[Token]
   def validateToken(token: Token): AuthIO[Claims]
+
+object AuthenticationService:
+
+  type WithAuthIO[R] = ZIO[AuthenticationService, AuthenticationError, R]
+
+  def withAuth[R](f: AuthenticationService => WithAuthIO[R]) = ZIO.service[AuthenticationService].flatMap(f)
+
+  def createChallengeMessage(wallet: Wallet): WithAuthIO[Message] =
+    withAuth(_.createChallengeMessage(wallet))
+
+  def login(wallet: Wallet, challengeMessage: Message, signature: Signature): WithAuthIO[Token] =
+    withAuth(_.login(wallet, challengeMessage, signature))
+
+  def validateToken(token: Token): WithAuthIO[Claims] =
+    withAuth(_.validateToken(token))
