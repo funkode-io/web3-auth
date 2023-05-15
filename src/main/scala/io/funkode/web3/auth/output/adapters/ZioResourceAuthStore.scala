@@ -7,8 +7,11 @@
 package io.funkode.web3.auth.output
 package adapters
 
+import io.funkode.arangodb.ArangoConfiguration
+import io.funkode.arangodb.http.ArangoClientJson
 import io.funkode.resource.model.*
 import io.funkode.resource.output.*
+import io.funkode.resource.output.adapter.ArangoResourceStore
 import zio.*
 import zio.json.*
 
@@ -58,5 +61,15 @@ class ZioResourceAuthStore(store: ResourceStore) extends AuthStore:
 
 object ZioResourceAuthStore:
 
-  val live: ZLayer[ResourceStore, Nothing, AuthStore] =
+  val default: ZLayer[ResourceStore, Nothing, AuthStore] =
     ZLayer(ZIO.service[ResourceStore].map(store => ZioResourceAuthStore(store)))
+
+  val inMemory = ResourceStore.inMemory >>> default
+
+  val derived = ArangoResourceStore.derived[Authentication] >>> default
+
+  val testContainers =
+    (ArangoConfiguration.default ++ zio.http.Client.default) >>> ArangoClientJson.testContainers >>> derived
+
+  val live =
+    (ArangoConfiguration.default ++ zio.http.Client.default) >>> ArangoClientJson.live >>> derived
