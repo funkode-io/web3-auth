@@ -9,6 +9,7 @@ package adapters
 
 import com.fasterxml.jackson.annotation.ObjectIdGenerators.UUIDGenerator
 import io.funkode.resource.output.*
+import io.funkode.resource.output.adapter.ArangoResourceStore
 import pdi.jwt.*
 import zio.*
 import zio.test.*
@@ -53,7 +54,4 @@ object ZioResourceAuthStoreSpec extends ZIOSpecDefault with WalletAndChallengeEx
           yield assertTrue(registeredChallenge == randomChallenge)
         }
       }
-    ).provideShared(
-      ZioResourceAuthStore.live,
-      ResourceStore.inMemory
-    )
+    ).provideShared(ZioResourceAuthStore.testContainers)
