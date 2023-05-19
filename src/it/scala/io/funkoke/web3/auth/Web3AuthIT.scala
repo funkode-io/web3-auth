@@ -5,15 +5,16 @@ package io.funkoke.web3.auth
 
 import java.util.UUID
 
-import io.funkode.web3.auth.input.AuthenticationService
-import io.funkode.web3.auth.domain.AuthenticationLogic
-import io.funkode.web3.auth.model.*
-import io.funkode.web3.auth.output.AuthStore
 import io.funkode.web3.auth.output.adapters.*
 import org.web3j.crypto.*
 import zio.*
 import zio.test.Assertion.*
 import zio.test.*
+
+import io.funkode.web3.auth.input.AuthenticationService
+import io.funkode.web3.auth.domain.AuthenticationLogic
+import io.funkode.web3.auth.model.*
+import io.funkode.web3.auth.output.AuthStore
 
 trait SampleCredentials:
 
