@@ -6,6 +6,8 @@
 
 package io.funkode.web3.auth.model
 
+import zio.json.*
+
 enum TokenType:
   case Jwt
 
@@ -20,4 +22,7 @@ object Subject:
   def apply(value: String): Subject = value
   extension (x: Subject) def unwrap: String = x
 
-case class Claims(sub: Subject, iat: Option[Long])
+  given JsonCodec[Subject] =
+    JsonCodec(JsonEncoder[String].contramap(unwrap), JsonDecoder[String].map(Subject.apply))
+
+case class Claims(sub: Subject, iat: Option[Long]) derives JsonCodec
