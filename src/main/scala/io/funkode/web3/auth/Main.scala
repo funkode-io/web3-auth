@@ -6,10 +6,40 @@
 
 package io.funkode.web3.auth
 
+import java.net.{InetAddress, InetSocketAddress}
+
+import io.funkode.resource.output.adapter.*
 import zio.*
+import zio.http.*
+import zio.http.middleware.RequestHandlerMiddlewares
 
 object Main extends ZIOAppDefault:
 
-  // $COVERAGE-OFF$
-  override val run = ZIO.succeed(println("Hello Carlos Verdes"))
-  // $COVERAGE-ON$
+  import input.AuthenticationService
+  import input.adapters.*
+  import domain.AuthenticationLogic
+  import output.adapters.*
+
+  val authApp = RestAuthenticationApi.app @@ RequestHandlerMiddlewares.debug
+
+  val serverConfig =
+    ZLayer {
+      for restConfig <- ZIO.service[RestApiConfig]
+      yield ServerConfig(
+        address = new InetSocketAddress(InetAddress.getByName(restConfig.host), restConfig.port)
+      )
+    }
+
+  override val run =
+    Server
+      .serve[AuthenticationService](authApp)
+      .provide(
+        RestApiConfig.default,
+        serverConfig,
+        Server.live,
+        EvmWeb3Provider.live,
+        JwtConfig.default,
+        JwtTokenProvider.live,
+        ZioResourceAuthStore.live,
+        AuthenticationLogic.default
+      )
