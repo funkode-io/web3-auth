@@ -47,16 +47,19 @@ object RestAuthenticationApiSpec extends ZIOSpecDefault with WalletAndChallengeE
 
   def spec = suite("Rest Authentication API should")(
     test("create challenge for a wallet") {
-      val request = Request.post(Body.empty, URL(!! / "challenge" / walletAddress1))
+      val createChallengeJson = s"""{"walletAddress": "$walletAddress1"}"""
+      val request = Request.post(Body.fromString(createChallengeJson), URL(!! / "login"))
+
       assertZIO(app.runZIO(request))(
         equalTo(
-          Response.text(challengeMessage1.unwrap).withLocation("/login/" + walletAddress1)
+          Response.text(challengeMessage1.unwrap).withLocation("/login/" + challengeMessage1)
         )
       )
     },
     test("create a token if signature matches challenge") {
-      val requestJson = s"""{"message": "$challengeMessage1", "signature": "$signature1"}"""
-      val request = Request.post(Body.fromString(requestJson), URL(!! / "login" / walletAddress1))
+      val requestJson = s"""{"walletAddress": "$walletAddress1", "signature": "$signature1"}"""
+      val request =
+        Request.post(Body.fromString(requestJson), URL(!! / "login" / challengeMessage1.unwrap))
       assertZIO(app.runZIO(request))(
         equalTo(Response.text(token1.unwrap).withLocation("/claims/" + token1.unwrap))
       )

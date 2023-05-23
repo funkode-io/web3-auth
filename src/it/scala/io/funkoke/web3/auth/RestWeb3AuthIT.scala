@@ -54,11 +54,14 @@ object RestAuthIT extends ZIOSpecDefault with SampleRequests:
         "Create challenge from wallet, validate signature and create login token and get wallet info from token"
       ) {
         for
-          challengeResponse <- app.runZIO(Request.post(Body.empty, URL(!! / "challenge" / walletAddress1)))
+          _ <- ZIO.unit
+          createChallengeJson = s"""{"walletAddress": "$walletAddress1"}"""
+          createChallengeRequest = Request.post(Body.fromString(createChallengeJson), URL(!! / "login"))
+          challengeResponse <- app.runZIO(createChallengeRequest)
           loginUrl = URL.fromString(challengeResponse.location.get.toString).getOrElse(URL.empty)
           loginChallenge <- challengeResponse.body.asString
           signature <- signMessage(ecKeyPair1, loginChallenge)
-          loginRequestJson = s"""{"message": "$loginChallenge", "signature": "$signature"}"""
+          loginRequestJson = s"""{"walletAddress": "$walletAddress1", "signature": "$signature"}"""
           tokenRequest = Request.post(Body.fromString(loginRequestJson), loginUrl)
           tokenResponse <- app.runZIO(tokenRequest)
           token <- tokenResponse.body.asString
