@@ -18,27 +18,37 @@ import io.funkode.web3.auth.model.*
 
 object RestAuthenticationApi:
 
-  case class LoginRequest(message: String, signature: String) derives JsonCodec
+  case class CreateChallenge(walletAddress: String) derives JsonCodec
+  case class LoginRequest(walletAddress: String, signature: String) derives JsonCodec
+
+  extension (request: Request)
+    def parsedAs[R: JsonDecoder] = JsonDecoder[R]
+      .decodeJsonStreamInput(request.body.asStream)
+      .mapError(e => Response.fromHttpError(HttpError.BadRequest(s"Error decoding request: ${e.getMessage}")))
+
+    def remoteAddressString = request.remoteAddress.map(_.toString).getOrElse("")
 
   val app = Http.collectZIO[Request] {
-    case Method.POST -> !! / "challenge" / publicAddress =>
-      AuthenticationService
-        .createChallengeMessage(publicAddress)
-        .map(_.unwrap)
-        .map(Response.text)
-        .map(_.withLocation("/login/" + publicAddress))
-        .flatMapError(mapErrorToResponse)
+    case req @ Method.POST -> !! / "login" =>
+      for
+        createChallengeRequest <- req.parsedAs[CreateChallenge]
+        challenge <- AuthenticationService
+          .createChallengeMessage(createChallengeRequest.walletAddress)
+          .flatMapError(mapErrorToResponse)
+      yield Response
+        .text(challenge.unwrap)
+        .withLocation(req.remoteAddressString + "/login/" + challenge.unwrap)
 
-    case req @ Method.POST -> !! / "login" / publicAddress =>
+    case req @ Method.POST -> !! / "login" / challenge =>
       for
         loginRequest <- JsonDecoder[LoginRequest]
           .decodeJsonStreamInput(req.body.asStream)
           .mapError(e =>
             Response.fromHttpError(HttpError.BadRequest(s"Error decoding login request: ${e.getMessage}"))
           )
-        LoginRequest(message, signature) = loginRequest
+        LoginRequest(walletAddress, signature) = loginRequest
         token <- AuthenticationService
-          .login(publicAddress, Message(message), Signature(signature))
+          .login(walletAddress, Message(challenge), Signature(signature))
           .flatMapError(mapErrorToResponse)
       yield Response.text(token.unwrap).withLocation("/claims/" + token.unwrap)
 
