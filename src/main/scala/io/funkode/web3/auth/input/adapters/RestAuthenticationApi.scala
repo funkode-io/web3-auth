@@ -8,6 +8,7 @@ package io.funkode.web3.auth.input
 package adapters
 
 import io.funkode.resource.model.*
+import io.lemonlabs.uri.Url
 import zio.*
 import zio.http.*
 import zio.http.model.*
@@ -17,10 +18,38 @@ import io.funkode.web3.auth.model.*
 
 object RestAuthenticationApi:
 
-  case class LoginRequest(
-      message: String,
-      signature: String
-  ) derives JsonCodec
+  case class LoginRequest(message: String, signature: String) derives JsonCodec
+
+  val app = Http.collectZIO[Request] {
+    case Method.POST -> !! / "challenge" / publicAddress =>
+      AuthenticationService
+        .createChallengeMessage(publicAddress)
+        .map(_.unwrap)
+        .map(Response.text)
+        .map(_.withLocation("/login/" + publicAddress))
+        .flatMapError(mapErrorToResponse)
+
+    case req @ Method.POST -> !! / "login" / publicAddress =>
+      for
+        loginRequest <- JsonDecoder[LoginRequest]
+          .decodeJsonStreamInput(req.body.asStream)
+          .mapError(e =>
+            Response.fromHttpError(HttpError.BadRequest(s"Error decoding login request: ${e.getMessage}"))
+          )
+        LoginRequest(message, signature) = loginRequest
+        token <- AuthenticationService
+          .login(publicAddress, Message(message), Signature(signature))
+          .flatMapError(mapErrorToResponse)
+      yield Response.text(token.unwrap).withLocation("/claims/" + token.unwrap)
+
+    case Method.GET -> !! / "claims" / token =>
+      for claims <- AuthenticationService
+          .validateToken(Token(token))
+          .flatMapError(mapErrorToResponse)
+      yield Response.text(claims.toJson).withLocation("/claims/" + token)
+  }
+
+  given Conversion[String, Wallet] = publicAddress => Wallet(WalletAddress(publicAddress))
 
   def showCause(cause: Option[Throwable]): String =
     cause.map(c => s": " + c.getMessage).getOrElse("")
@@ -39,37 +68,3 @@ object RestAuthenticationApi:
       case e @ AuthenticationError.Internal(msg, cause) =>
         ZIO.logErrorCause(s"Internal server error${cause.getMessage}", Cause.fail(e)) *>
           ZIO.succeed(Response.fromHttpError(HttpError.InternalServerError(s"Invalid server error: $msg")))
-
-  val app = Http.collectZIO[Request] {
-    case Method.POST -> !! / "challenge" / publicAddress =>
-      AuthenticationService
-        .createChallengeMessage(publicAddress)
-        .map(_.unwrap)
-        .map(Response.text)
-        .flatMapError(mapErrorToResponse)
-
-    case req @ Method.POST -> !! / "login" / publicAddress =>
-      for
-        loginRequest <- JsonDecoder[LoginRequest]
-          .decodeJsonStreamInput(req.body.asStream)
-          .mapError(e =>
-            Response.fromHttpError(HttpError.BadRequest(s"Error decoding login request: ${e.getMessage}"))
-          )
-        LoginRequest(message, signature) = loginRequest
-        token <- AuthenticationService
-          .login(publicAddress, Message(message), Signature(signature))
-          .flatMapError(mapErrorToResponse)
-      yield Response.text(token.unwrap)
-
-    case req @ Method.GET -> !! / "claims" =>
-      for
-        token <- req.body.asString.mapError(e =>
-          Response.fromHttpError(HttpError.BadRequest(s"Error reading token from request: ${e.getMessage}"))
-        )
-        claims <- AuthenticationService
-          .validateToken(Token(token))
-          .flatMapError(mapErrorToResponse)
-      yield Response.text(claims.toJson)
-  }
-
-  given Conversion[String, Wallet] = publicAddress => Wallet(WalletAddress(publicAddress))
