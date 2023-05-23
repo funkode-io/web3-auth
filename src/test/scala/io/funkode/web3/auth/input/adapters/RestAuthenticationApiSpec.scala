@@ -48,16 +48,24 @@ object RestAuthenticationApiSpec extends ZIOSpecDefault with WalletAndChallengeE
   def spec = suite("Rest Authentication API should")(
     test("create challenge for a wallet") {
       val request = Request.post(Body.empty, URL(!! / "challenge" / walletAddress1))
-      assertZIO(app.runZIO(request))(equalTo(Response.text(challengeMessage1.unwrap)))
+      assertZIO(app.runZIO(request))(
+        equalTo(
+          Response.text(challengeMessage1.unwrap).withLocation("/login/" + walletAddress1)
+        )
+      )
     },
     test("create a token if signature matches challenge") {
       val requestJson = s"""{"message": "$challengeMessage1", "signature": "$signature1"}"""
       val request = Request.post(Body.fromString(requestJson), URL(!! / "login" / walletAddress1))
-      assertZIO(app.runZIO(request))(equalTo(Response.text(token1.unwrap)))
+      assertZIO(app.runZIO(request))(
+        equalTo(Response.text(token1.unwrap).withLocation("/claims/" + token1.unwrap))
+      )
     },
     test("get claims from proper token") {
-      val request = Request.default(Method.GET, URL(!! / "claims"), Body.fromString(token1.unwrap))
+      val request = Request.get(URL(!! / "claims" / token1.unwrap))
       val responseJson = s"""{"sub":"${claims1.sub}"}"""
-      assertZIO(app.runZIO(request))(equalTo(Response.text(responseJson)))
+      assertZIO(app.runZIO(request))(
+        equalTo(Response.text(responseJson).withLocation("/claims/" + token1.unwrap))
+      )
     }
   ).provideShared(mockService)

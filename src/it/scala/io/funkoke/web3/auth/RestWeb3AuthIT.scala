@@ -4,6 +4,7 @@
 package io.funkoke.web3.auth
 
 import java.util.UUID
+
 import org.web3j.crypto.*
 import zio.*
 import zio.http.*
@@ -16,7 +17,7 @@ import io.funkode.web3.auth.domain.AuthenticationLogic
 import io.funkode.web3.auth.input.adapters.RestAuthenticationApi
 import io.funkode.web3.auth.output.adapters.*
 import io.lemonlabs.uri.Urn
-import zio.http.model.Method
+import zio.http.model.{Header, Method}
 
 trait SampleRequests:
 
@@ -54,13 +55,15 @@ object RestAuthIT extends ZIOSpecDefault with SampleRequests:
       ) {
         for
           challengeResponse <- app.runZIO(Request.post(Body.empty, URL(!! / "challenge" / walletAddress1)))
+          loginUrl = URL.fromString(challengeResponse.location.get.toString).getOrElse(URL.empty)
           loginChallenge <- challengeResponse.body.asString
           signature <- signMessage(ecKeyPair1, loginChallenge)
           loginRequestJson = s"""{"message": "$loginChallenge", "signature": "$signature"}"""
-          tokenRequest = Request.post(Body.fromString(loginRequestJson), URL(!! / "login" / walletAddress1))
+          tokenRequest = Request.post(Body.fromString(loginRequestJson), loginUrl)
           tokenResponse <- app.runZIO(tokenRequest)
           token <- tokenResponse.body.asString
-          claimsRequest = Request.default(Method.GET, URL(!! / "claims"), Body.fromString(token))
+          claimsUrl = URL.fromString(tokenResponse.location.get.toString).getOrElse(URL.empty)
+          claimsRequest = Request.default(Method.GET, claimsUrl, Body.fromString(token))
           claimsResponse <- app.runZIO(claimsRequest).flatMap(_.body.asString)
           claims <- ZIO.fromEither(claimsResponse.fromJson[Claims])
         yield assertTrue(claims.sub.unwrap == s"urn:wallet:evm:$walletAddress1")
