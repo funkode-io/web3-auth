@@ -49,6 +49,23 @@ ThisBuild / scalacOptions ++=
     "-Yretain-trees"
   ) ++ Seq("-rewrite", "-indent") ++ Seq("-source", "future-migration")
 
+// assembly
+ThisBuild / assemblyMergeStrategy := {
+  case PathList("javax", xs @ _*) => MergeStrategy.discard
+  case PathList("org", "apache", xs @ _*) => MergeStrategy.first
+  case PathList("org", "newsclub", xs @ _*) => MergeStrategy.discard
+  case PathList(ps @ _*) if ps.last endsWith ".html" => MergeStrategy.first
+  case "application.conf" => MergeStrategy.concat
+  case "reference.conf" => MergeStrategy.concat
+  case "unwanted.txt" => MergeStrategy.discard
+  case "logback.xml" => MergeStrategy.last
+  case x if x.endsWith("module-info.class") => MergeStrategy.concat
+  case x if x.contains("io.netty.versions.properties") => MergeStrategy.last
+  case x =>
+    val oldStrategy = (ThisBuild / assemblyMergeStrategy).value
+    oldStrategy(x)
+}
+
 lazy val testLibs = Seq(zioTest, zioTestSbt).map(_ % "it, test")
 
 lazy val root =
@@ -62,8 +79,11 @@ lazy val root =
       libraryDependencies ++= Seq(zioResource, zioSlf4j2Log, jwtZioJson, web3j) ++ testLibs,
       testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
       headerLicense := Some(HeaderLicense.MIT("2023", "Carlos Verdes", HeaderLicenseStyle.SpdxSyntax)),
-      coverageExcludedPackages := ".*Main.*"
-    ).enablePlugins(AutomateHeaderPlugin)
+      coverageExcludedPackages := ".*Main.*",
+      assembly / mainClass := Some("io.funkode.web3.auth.Main"),
+      assembly / assemblyJarName := "dfolio-auth.jar",
+      assembly / assemblyMergeStrategy := (ThisBuild / assemblyMergeStrategy).value
+    ).enablePlugins(AutomateHeaderPlugin, JavaAppPackaging)
 
 addCommandAlias("ll", "projects")
 addCommandAlias("checkFmtAll", ";scalafmtSbtCheck;scalafmtCheckAll")
