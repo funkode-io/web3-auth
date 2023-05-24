@@ -7,8 +7,10 @@
 package io.funkode.web3.auth
 package domain
 
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
+import io.funkode.resource.model.*
 import io.lemonlabs.uri.Urn
 import zio.*
 
@@ -16,26 +18,32 @@ import io.funkode.web3.auth.input.*
 import io.funkode.web3.auth.model.*
 import io.funkode.web3.auth.output.*
 
-class AuthenticationLogic(store: AuthStore, web3: Web3Service, tokenService: TokenService)
-    extends AuthenticationService:
+class AuthenticationLogic(
+    config: AuthenticationServiceConfig,
+    store: AuthStore,
+    web3: Web3Service,
+    tokenService: TokenService
+) extends AuthenticationService:
 
   import AuthStore.ifNotFound
 
-  def createChallengeMessage(wallet: Wallet): AuthIO[Message] =
+  def createLoginChallenge(wallet: Wallet): AuthIO[Resource.Of[Challenge]] =
     for
       _ <- validateWallet(wallet)
       challenge <- store
         .getChallengeForWallet(wallet)
         .ifNotFound(createAndRegisterChallengeForWallet(wallet))
         .mapStoreErrors
-    yield challenge.toMessage
+    yield challenge
 
-  def login(wallet: Wallet, challengeMessage: Message, signature: Signature): AuthIO[Token] =
+  def login(challengeUrn: Urn, signature: Signature): AuthIO[Token] =
     for
+      challenge <- store.getChallengeByUrn(challengeUrn).mapStoreErrors
+      wallet <- store.getWalletForChallenge(challenge).mapStoreErrors
       _ <- web3
-        .validateSignature(wallet, challengeMessage, signature)
+        .validateSignature(wallet, challenge.message, signature)
         .mapError(e => AuthenticationError.BadCredentials("wrong signature", Some(e)))
-      _ <- validateChallenge(wallet, challengeMessage)
+      // _ <- validateChallenge(wallet, challenge)
       _ <- createAndRegisterChallengeForWallet(wallet).mapStoreErrors
       token <- tokenService
         .createToken(Subject(wallet.urn.toString))
@@ -45,13 +53,14 @@ class AuthenticationLogic(store: AuthStore, web3: Web3Service, tokenService: Tok
   def validateToken(token: Token): AuthIO[Claims] =
     tokenService.parseToken(token).mapError(e => AuthenticationError.InvalidToken(token, e))
 
-  private def createAndRegisterChallengeForWallet(wallet: Wallet): AuthStoreIO[Challenge] =
+  private def createAndRegisterChallengeForWallet(wallet: Wallet): AuthStoreIO[Resource.Of[Challenge]] =
     for
       newUUID <- Random.nextUUID
       createdAt <- Clock.currentTime(TimeUnit.MILLISECONDS)
-      newChallenge = Challenge(newUUID, createdAt)
-      _ <- store.registerChallengeForWallet(wallet, newChallenge)
-    yield newChallenge
+      message = Message(config.loginMessageTemplate + newUUID.toString)
+      newChallenge = Challenge(newUUID, message, createdAt)
+      storedChallenge <- store.registerChallengeForWallet(wallet, newChallenge)
+    yield storedChallenge
 
   private def validateWallet(wallet: Wallet): AuthUIO =
     web3.validateWallet(wallet).mapError {
@@ -61,17 +70,16 @@ class AuthenticationLogic(store: AuthStore, web3: Web3Service, tokenService: Tok
         AuthenticationError.Internal("Internal web3 error identifying user", other)
     }
 
-  private def validateChallenge(wallet: Wallet, inputChallenge: Message): AuthUIO =
+  /*
+  private def validateChallenge(wallet: Wallet, inputChallenge: Challenge): AuthUIO =
     for
       storedChallenge <- store.getChallengeForWallet(wallet).mapStoreErrors
       _ <-
-        if storedChallenge.toMessage != inputChallenge
+        if storedChallenge.uuid != inputChallenge.uuid || storedChallenge.message != inputChallenge.message
         then ZIO.fail(AuthenticationError.BadCredentials(s"Invalid or expired challenge: $inputChallenge"))
         else ZIO.unit
     yield ()
-
-  // TODO customized challenge message
-  extension (challenge: Challenge) def toMessage: Message = Message.apply(challenge.uuid.toString)
+   */
 
   extension [R](storeIO: AuthStoreIO[R])
     def mapStoreErrors: AuthIO[R] =
@@ -88,11 +96,16 @@ class AuthenticationLogic(store: AuthStore, web3: Web3Service, tokenService: Tok
 
 object AuthenticationLogic:
 
-  val default: ZLayer[AuthStore & Web3Service & TokenService, AuthenticationError, AuthenticationService] =
+  val default: ZLayer[
+    AuthenticationServiceConfig & AuthStore & Web3Service & TokenService,
+    AuthenticationError,
+    AuthenticationService
+  ] =
     ZLayer(
       for
         store <- ZIO.service[AuthStore]
         web3 <- ZIO.service[Web3Service]
         tokenService <- ZIO.service[TokenService]
-      yield new AuthenticationLogic(store, web3, tokenService)
+        config <- ZIO.service[AuthenticationServiceConfig]
+      yield new AuthenticationLogic(config, store, web3, tokenService)
     )

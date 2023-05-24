@@ -4,14 +4,12 @@
 package io.funkoke.web3.auth
 
 import java.util.UUID
-
 import io.funkode.web3.auth.output.adapters.*
 import org.web3j.crypto.*
 import zio.*
 import zio.test.Assertion.*
 import zio.test.*
-
-import io.funkode.web3.auth.input.AuthenticationService
+import io.funkode.web3.auth.input.{AuthenticationService, AuthenticationServiceConfig}
 import io.funkode.web3.auth.domain.AuthenticationLogic
 import io.funkode.web3.auth.model.*
 import io.funkode.web3.auth.output.AuthStore
@@ -49,13 +47,15 @@ object Web3AuthIT extends ZIOSpecDefault with SampleCredentials:
         "Create challenge from wallet, validate signature and create login token and get wallet info from token"
       ) {
         for
-          loginChallenge <- AuthenticationService.createChallengeMessage(wallet1)
-          signature <- signMessage(ecKeyPair1, loginChallenge.unwrap)
-          token <- AuthenticationService.login(wallet1, loginChallenge, signature)
+          loginChallengeResource <- AuthenticationService.createLoginChallenge(wallet1)
+          loginChallenge <- loginChallengeResource.body
+          signature <- signMessage(ecKeyPair1, loginChallenge.message.unwrap)
+          token <- AuthenticationService.login(loginChallengeResource.urn, signature)
           claims <- AuthenticationService.validateToken(token)
         yield assertTrue(claims.sub == io.funkode.web3.auth.model.Subject(wallet1.urn.toString))
       }
     ).provideShared(
+      AuthenticationServiceConfig.default,
       EvmWeb3Provider.live,
       JwtConfig.default,
       JwtTokenProvider.live,

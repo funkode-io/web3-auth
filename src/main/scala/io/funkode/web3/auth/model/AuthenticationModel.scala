@@ -47,16 +47,20 @@ object Message:
   def apply(value: String): Message = value
   extension (x: Message) def unwrap: String = x
 
+  given JsonCodec[Message] =
+    JsonCodec(JsonEncoder[String].contramap(unwrap), JsonDecoder[String].map(Message.apply))
+
 opaque type Signature = String
 object Signature:
   def apply(value: String): Signature = value
   extension (x: Signature) def unwrap: String = x
 
-case class Challenge(uuid: UUID, createdAt: Long) extends Authentication derives JsonCodec
+case class Challenge(uuid: UUID, message: Message, createdAt: Long) extends Authentication derives JsonCodec
 
 object Challenge:
 
   val Nid = "challenge"
+  val ChallengeFor = "challengeFor"
 
   given Resource.Addressable[Challenge] = new Resource.Addressable[Challenge]:
     def resourceNid: String = Challenge.Nid
