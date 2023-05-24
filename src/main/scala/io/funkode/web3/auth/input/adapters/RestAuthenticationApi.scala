@@ -30,8 +30,6 @@ object RestAuthenticationApi:
       .tapError(e => ZIO.logErrorCause(s"Error parsing request ${request.url}", Cause.fail(e)))
       .mapError(e => Response.fromHttpError(HttpError.BadRequest(s"Error decoding request: ${e.getMessage}")))
 
-    def remoteAddressString = request.remoteAddress.map(_.toString).getOrElse("")
-
   val app = Http.collectZIO[Request] {
     case req @ Method.POST -> !! / "login" =>
       for
@@ -46,7 +44,7 @@ object RestAuthenticationApi:
         )
       yield Response
         .text(challenge.message.unwrap)
-        .withLocation(req.remoteAddressString + "/login/" + challengeResource.urn.nss)
+        .withLocation("/login/" + challengeResource.urn.nss)
 
     case req @ Method.POST -> !! / "login" / challengeUuid =>
       for
