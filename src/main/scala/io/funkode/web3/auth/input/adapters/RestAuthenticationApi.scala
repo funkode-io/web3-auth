@@ -7,8 +7,11 @@
 package io.funkode.web3.auth.input
 package adapters
 
+import java.util.UUID
+import java.util.concurrent.TimeUnit
+
 import io.funkode.resource.model.*
-import io.lemonlabs.uri.Url
+import io.lemonlabs.uri.Urn
 import zio.*
 import zio.http.*
 import zio.http.model.*
@@ -24,6 +27,7 @@ object RestAuthenticationApi:
   extension (request: Request)
     def parsedAs[R: JsonDecoder] = JsonDecoder[R]
       .decodeJsonStreamInput(request.body.asStream)
+      .tapError(e => ZIO.logErrorCause(s"Error parsing request ${request.url}", Cause.fail(e)))
       .mapError(e => Response.fromHttpError(HttpError.BadRequest(s"Error decoding request: ${e.getMessage}")))
 
     def remoteAddressString = request.remoteAddress.map(_.toString).getOrElse("")
@@ -32,23 +36,25 @@ object RestAuthenticationApi:
     case req @ Method.POST -> !! / "login" =>
       for
         createChallengeRequest <- req.parsedAs[CreateChallenge]
-        challenge <- AuthenticationService
-          .createChallengeMessage(createChallengeRequest.walletAddress)
+        challengeResource <- AuthenticationService
+          .createLoginChallenge(createChallengeRequest.walletAddress)
           .flatMapError(mapErrorToResponse)
-      yield Response
-        .text(challenge.unwrap)
-        .withLocation(req.remoteAddressString + "/login/" + challenge.unwrap)
-
-    case req @ Method.POST -> !! / "login" / challenge =>
-      for
-        loginRequest <- JsonDecoder[LoginRequest]
-          .decodeJsonStreamInput(req.body.asStream)
-          .mapError(e =>
-            Response.fromHttpError(HttpError.BadRequest(s"Error decoding login request: ${e.getMessage}"))
+        challenge <- challengeResource.body.mapError(e =>
+          Response.fromHttpError(
+            HttpError.InternalServerError(s"Internal error parsing challenge: ${e.getMessage}")
           )
-        LoginRequest(walletAddress, signature) = loginRequest
+        )
+      yield Response
+        .text(challenge.message.unwrap)
+        .withLocation(req.remoteAddressString + "/login/" + challengeResource.urn.nss)
+
+    case req @ Method.POST -> !! / "login" / challengeUuid =>
+      for
+        signature <- req.body.asString.mapError(e =>
+          Response.fromHttpError(HttpError.BadRequest(s"Error reading signature : ${e.getMessage}"))
+        )
         token <- AuthenticationService
-          .login(walletAddress, Message(challenge), Signature(signature))
+          .login(Urn(Challenge.Nid, challengeUuid), Signature(signature))
           .flatMapError(mapErrorToResponse)
       yield Response.text(token.unwrap).withLocation("/claims/" + token.unwrap)
 

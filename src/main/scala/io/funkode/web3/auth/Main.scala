@@ -15,7 +15,7 @@ import zio.http.middleware.RequestHandlerMiddlewares
 
 object Main extends ZIOAppDefault:
 
-  import input.AuthenticationService
+  import input.*
   import input.adapters.*
   import domain.AuthenticationLogic
   import output.adapters.*
@@ -34,6 +34,7 @@ object Main extends ZIOAppDefault:
     Server
       .serve[AuthenticationService](authApp)
       .provide(
+        AuthenticationServiceConfig.default,
         RestApiConfig.default,
         serverConfig,
         Server.live,

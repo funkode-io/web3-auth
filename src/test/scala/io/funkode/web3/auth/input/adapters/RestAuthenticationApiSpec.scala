@@ -7,6 +7,8 @@
 package io.funkode.web3.auth.input
 package adapters
 
+import io.funkode.resource.model.*
+import io.lemonlabs.uri.Urn
 import zio.*
 import zio.http.*
 import zio.http.model.Method
@@ -19,7 +21,11 @@ trait WalletAndChallengeExamples:
 
   val walletAddress1 = "0xef678007D18427E6022059Dbc264f27507CD1ffC"
   val wallet1 = Wallet(WalletAddress("0xef678007D18427E6022059Dbc264f27507CD1ffC"))
-  val challengeMessage1 = Message("challenge1")
+
+  val challenge1Uuid = java.util.UUID.fromString("e58ed763-928c-4155-bee9-fdbaaadc15f3")
+  val challenge1Message = Message("Challenge:\ne58ed763-928c-4155-bee9-fdbaaadc15f3")
+  val challenge1 = Challenge(challenge1Uuid, challenge1Message, -1L)
+
   val signature1 = Signature("signature1")
   val token1 = Token("token1")
   val claims1 = Claims(Subject(walletAddress1), None)
@@ -27,12 +33,12 @@ trait WalletAndChallengeExamples:
   val wallet3 = Wallet(WalletAddress("0x44A84615dD457f729bbbf85f009F3d2e8d484D91"))
 
 class MockAuthenticationService extends AuthenticationService with WalletAndChallengeExamples:
-  def createChallengeMessage(wallet: Wallet): AuthIO[Message] =
-    if wallet == wallet1 then ZIO.succeed(challengeMessage1)
+  def createLoginChallenge(wallet: Wallet): AuthIO[Resource.Of[Challenge]] =
+    if wallet == wallet1 then ZIO.succeed(Resource.fromAddressableClass(challenge1))
     else ZIO.fail(AuthenticationError.InvalidWallet(wallet))
 
-  def login(wallet: Wallet, challenge: Message, sign: Signature): AuthIO[Token] =
-    if (wallet == wallet1 && challenge == challengeMessage1 && sign == signature1) then ZIO.succeed(token1)
+  def login(challengeUrn: Urn, sign: Signature): AuthIO[Token] =
+    if (challengeUrn == challenge1.urn && sign == signature1) then ZIO.succeed(token1)
     else ZIO.fail(AuthenticationError.BadCredentials("bad signature"))
 
   def validateToken(token: Token): AuthIO[Claims] =
@@ -52,14 +58,13 @@ object RestAuthenticationApiSpec extends ZIOSpecDefault with WalletAndChallengeE
 
       assertZIO(app.runZIO(request))(
         equalTo(
-          Response.text(challengeMessage1.unwrap).withLocation("/login/" + challengeMessage1)
+          Response.text(challenge1.message.unwrap).withLocation("/login/" + challenge1.uuid.toString)
         )
       )
     },
     test("create a token if signature matches challenge") {
-      val requestJson = s"""{"walletAddress": "$walletAddress1", "signature": "$signature1"}"""
       val request =
-        Request.post(Body.fromString(requestJson), URL(!! / "login" / challengeMessage1.unwrap))
+        Request.post(Body.fromString(signature1.unwrap), URL(!! / "login" / challenge1.uuid.toString))
       assertZIO(app.runZIO(request))(
         equalTo(Response.text(token1.unwrap).withLocation("/claims/" + token1.unwrap))
       )

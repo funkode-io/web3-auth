@@ -7,6 +7,9 @@
 package io.funkode.web3.auth
 package input
 
+import java.util.UUID
+
+import io.funkode.resource.model.Resource
 import io.lemonlabs.uri.Urn
 import zio.*
 
@@ -17,8 +20,8 @@ type AuthUIO = AuthIO[Unit]
 
 trait AuthenticationService:
 
-  def createChallengeMessage(wallet: Wallet): AuthIO[Message]
-  def login(wallet: Wallet, challengeMessage: Message, signature: Signature): AuthIO[Token]
+  def createLoginChallenge(wallet: Wallet): AuthIO[Resource.Of[Challenge]]
+  def login(challengeUrn: Urn, signature: Signature): AuthIO[Token]
   def validateToken(token: Token): AuthIO[Claims]
 
 object AuthenticationService:
@@ -27,11 +30,11 @@ object AuthenticationService:
 
   def withAuth[R](f: AuthenticationService => WithAuthIO[R]) = ZIO.service[AuthenticationService].flatMap(f)
 
-  def createChallengeMessage(wallet: Wallet): WithAuthIO[Message] =
-    withAuth(_.createChallengeMessage(wallet))
+  def createLoginChallenge(wallet: Wallet): WithAuthIO[Resource.Of[Challenge]] = withAuth(
+    _.createLoginChallenge(wallet)
+  )
 
-  def login(wallet: Wallet, challengeMessage: Message, signature: Signature): WithAuthIO[Token] =
-    withAuth(_.login(wallet, challengeMessage, signature))
+  def login(challengeUrn: Urn, signature: Signature): WithAuthIO[Token] =
+    withAuth(_.login(challengeUrn, signature))
 
-  def validateToken(token: Token): WithAuthIO[Claims] =
-    withAuth(_.validateToken(token))
+  def validateToken(token: Token): WithAuthIO[Claims] = withAuth(_.validateToken(token))

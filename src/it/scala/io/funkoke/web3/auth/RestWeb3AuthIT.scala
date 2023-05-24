@@ -4,7 +4,6 @@
 package io.funkoke.web3.auth
 
 import java.util.UUID
-
 import org.web3j.crypto.*
 import zio.*
 import zio.http.*
@@ -12,7 +11,7 @@ import zio.json.*
 import zio.test.Assertion.*
 import zio.test.*
 import io.funkode.web3.auth.model.*
-import io.funkode.web3.auth.input.AuthenticationService
+import io.funkode.web3.auth.input.{AuthenticationService, AuthenticationServiceConfig}
 import io.funkode.web3.auth.domain.AuthenticationLogic
 import io.funkode.web3.auth.input.adapters.RestAuthenticationApi
 import io.funkode.web3.auth.output.adapters.*
@@ -61,8 +60,7 @@ object RestAuthIT extends ZIOSpecDefault with SampleRequests:
           loginUrl = URL.fromString(challengeResponse.location.get.toString).getOrElse(URL.empty)
           loginChallenge <- challengeResponse.body.asString
           signature <- signMessage(ecKeyPair1, loginChallenge)
-          loginRequestJson = s"""{"walletAddress": "$walletAddress1", "signature": "$signature"}"""
-          tokenRequest = Request.post(Body.fromString(loginRequestJson), loginUrl)
+          tokenRequest = Request.post(Body.fromString(signature), loginUrl)
           tokenResponse <- app.runZIO(tokenRequest)
           token <- tokenResponse.body.asString
           claimsUrl = URL.fromString(tokenResponse.location.get.toString).getOrElse(URL.empty)
@@ -72,6 +70,7 @@ object RestAuthIT extends ZIOSpecDefault with SampleRequests:
         yield assertTrue(claims.sub.unwrap == s"urn:wallet:evm:$walletAddress1")
       }
     ).provideShared(
+      AuthenticationServiceConfig.default,
       EvmWeb3Provider.live,
       JwtConfig.default,
       JwtTokenProvider.live,
