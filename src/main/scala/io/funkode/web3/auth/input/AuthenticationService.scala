@@ -7,8 +7,6 @@
 package io.funkode.web3.auth
 package input
 
-import java.util.UUID
-
 import io.funkode.resource.model.Resource
 import io.lemonlabs.uri.Urn
 import zio.*

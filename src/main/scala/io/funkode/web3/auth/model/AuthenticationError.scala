@@ -6,8 +6,6 @@
 
 package io.funkode.web3.auth.model
 
-import io.lemonlabs.uri.Urn
-
 enum AuthenticationError extends Throwable:
   case InvalidWallet(invalid: Wallet, cause: Option[Throwable] = None)
   case BadCredentials(message: String, cause: Option[Throwable] = None)

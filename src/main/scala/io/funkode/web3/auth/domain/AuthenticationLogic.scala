@@ -7,7 +7,6 @@
 package io.funkode.web3.auth
 package domain
 
-import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 import io.funkode.resource.model.*
@@ -63,12 +62,13 @@ class AuthenticationLogic(
     yield storedChallenge
 
   private def validateWallet(wallet: Wallet): AuthUIO =
-    web3.validateWallet(wallet).mapError {
-      case Web3Error.InvalidWallet(_, cause) =>
-        AuthenticationError.InvalidWallet(wallet, cause)
-      case other: Web3Error =>
-        AuthenticationError.Internal("Internal web3 error identifying user", other)
-    }
+    web3
+      .validateWallet(wallet)
+      .mapError:
+        case Web3Error.InvalidWallet(_, cause) =>
+          AuthenticationError.InvalidWallet(wallet, cause)
+        case other: Web3Error =>
+          AuthenticationError.Internal("Internal web3 error identifying user", other)
 
   /*
   private def validateChallenge(wallet: Wallet, inputChallenge: Challenge): AuthUIO =
@@ -83,7 +83,7 @@ class AuthenticationLogic(
 
   extension [R](storeIO: AuthStoreIO[R])
     def mapStoreErrors: AuthIO[R] =
-      storeIO.mapError {
+      storeIO.mapError:
         case AuthStoreError.ChallengeNotFound(wallet, cause) =>
           AuthenticationError.BadCredentials(s"Challenge not found for wallet $wallet", Some(cause))
         case AuthStoreError.ErrorStoringWallet(wallet, cause) =>
@@ -92,7 +92,6 @@ class AuthenticationLogic(
           AuthenticationError.Internal(s"Error storing challenge in store: $challenge", cause)
         case AuthStoreError.InternalError(message, cause) =>
           AuthenticationError.Internal(s"Internal store error: $message", cause)
-      }
 
 object AuthenticationLogic:
 

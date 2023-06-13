@@ -7,10 +7,8 @@
 package io.funkode.web3.auth.output
 
 import io.funkode.resource.model.Resource
-import io.funkode.resource.output.*
 import io.lemonlabs.uri.Urn
 import zio.*
-import zio.json.*
 
 import io.funkode.web3.auth.model.*
 

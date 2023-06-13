@@ -7,16 +7,11 @@
 package io.funkode.web3.auth.output
 package adapters
 
-import com.fasterxml.jackson.annotation.ObjectIdGenerators.UUIDGenerator
-import io.funkode.resource.output.*
-import io.funkode.resource.output.adapter.ArangoResourceStore
-import pdi.jwt.*
 import zio.*
 import zio.test.*
 import zio.test.Assertion.*
 
 import io.funkode.web3.auth.model.*
-import io.funkode.web3.auth.output.TokenService
 import io.funkode.web3.auth.output.adapters.ZioResourceAuthStoreSpec.{wallet1, wallet3}
 
 trait WalletAndChallengeExamples:

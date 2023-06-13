@@ -9,7 +9,7 @@ inThisBuild(
   Seq(
     resolvers ++= Resolver.sonatypeOssRepos("releases"),
     organization := "io.funkode",
-    scalaVersion := "3.2.2",
+    scalaVersion := "3.3.0",
     versionScheme := Some("early-semver"),
     semanticdbEnabled := true,
     semanticdbVersion := scalafixSemanticdb.revision,
@@ -46,7 +46,9 @@ ThisBuild / scalacOptions ++=
     //    "-Yexplicit-nulls", // experimental (I've seen it cause issues with circe)
     "-Ykind-projector",
     //    "-Ysafe-init", // experimental (I've seen it cause issues with circe)
-    "-Yretain-trees"
+    "-Yretain-trees",
+    "-Wunused:all",
+    "Wvalue-discard"
   ) ++ Seq("-rewrite", "-indent") ++ Seq("-source", "future-migration")
 
 // assembly

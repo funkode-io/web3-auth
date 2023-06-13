@@ -11,7 +11,6 @@ import io.funkode.resource.model.*
 import io.lemonlabs.uri.Urn
 import zio.*
 import zio.http.*
-import zio.http.model.Method
 import zio.test.*
 import zio.test.Assertion.*
 
@@ -38,11 +37,11 @@ class MockAuthenticationService extends AuthenticationService with WalletAndChal
     else ZIO.fail(AuthenticationError.InvalidWallet(wallet))
 
   def login(challengeUrn: Urn, sign: Signature): AuthIO[Token] =
-    if (challengeUrn == challenge1.urn && sign == signature1) then ZIO.succeed(token1)
+    if challengeUrn == challenge1.urn && sign == signature1 then ZIO.succeed(token1)
     else ZIO.fail(AuthenticationError.BadCredentials("bad signature"))
 
   def validateToken(token: Token): AuthIO[Claims] =
-    if (token == token1) then ZIO.succeed(claims1)
+    if token == token1 then ZIO.succeed(claims1)
     else ZIO.fail(AuthenticationError.InvalidToken(token, new Throwable("wrong token")))
 
 object RestAuthenticationApiSpec extends ZIOSpecDefault with WalletAndChallengeExamples:

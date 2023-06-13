@@ -8,7 +8,6 @@ package io.funkode.web3.auth
 
 import java.net.{InetAddress, InetSocketAddress}
 
-import io.funkode.resource.output.adapter.*
 import zio.*
 import zio.http.*
 import zio.http.middleware.RequestHandlerMiddlewares
@@ -23,12 +22,11 @@ object Main extends ZIOAppDefault:
   val authApp = RestAuthenticationApi.app @@ RequestHandlerMiddlewares.debug
 
   val serverConfig =
-    ZLayer {
+    ZLayer:
       for restConfig <- ZIO.service[RestApiConfig]
       yield ServerConfig(
         address = new InetSocketAddress(InetAddress.getByName(restConfig.host), restConfig.port)
       )
-    }
 
   override val run =
     Server
