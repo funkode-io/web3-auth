@@ -7,7 +7,6 @@
 package io.funkode.web3.auth.output
 package adapters
 
-import zio.Scope
 import zio.test.*
 
 import io.funkode.web3.auth.model.*

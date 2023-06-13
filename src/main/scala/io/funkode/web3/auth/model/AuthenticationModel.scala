@@ -9,10 +9,7 @@ package io.funkode.web3.auth.model
 import java.util.UUID
 
 import io.funkode.resource.model.Resource
-import io.lemonlabs.uri.Urn
 import zio.json.{JsonCodec, JsonDecoder, JsonEncoder}
-
-import io.funkode.web3.auth.domain.*
 
 sealed trait Authentication
 

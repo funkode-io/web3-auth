@@ -15,8 +15,7 @@ import io.funkode.web3.auth.input.{AuthenticationService, AuthenticationServiceC
 import io.funkode.web3.auth.domain.AuthenticationLogic
 import io.funkode.web3.auth.input.adapters.RestAuthenticationApi
 import io.funkode.web3.auth.output.adapters.*
-import io.lemonlabs.uri.Urn
-import zio.http.model.{Header, Method}
+import zio.http.model.Method
 
 trait SampleRequests:
 

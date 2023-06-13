@@ -7,10 +7,6 @@
 package io.funkode.web3.auth.input
 package adapters
 
-import java.util.UUID
-import java.util.concurrent.TimeUnit
-
-import io.funkode.resource.model.*
 import io.lemonlabs.uri.Urn
 import zio.*
 import zio.http.*
@@ -30,7 +26,7 @@ object RestAuthenticationApi:
       .tapError(e => ZIO.logErrorCause(s"Error parsing request ${request.url}", Cause.fail(e)))
       .mapError(e => Response.fromHttpError(HttpError.BadRequest(s"Error decoding request: ${e.getMessage}")))
 
-  val app = Http.collectZIO[Request] {
+  val app = Http.collectZIO[Request]:
     case req @ Method.POST -> !! / "login" =>
       for
         createChallengeRequest <- req.parsedAs[CreateChallenge]
@@ -61,7 +57,6 @@ object RestAuthenticationApi:
           .validateToken(Token(token))
           .flatMapError(mapErrorToResponse)
       yield Response.text(claims.toJson).withLocation("/claims/" + token)
-  }
 
   given Conversion[String, Wallet] = publicAddress => Wallet(WalletAddress(publicAddress))
 
