@@ -10,7 +10,10 @@ import java.net.{InetAddress, InetSocketAddress}
 
 import zio.*
 import zio.http.*
+import zio.http.model.*
 import zio.http.middleware.RequestHandlerMiddlewares
+import zio.http.middleware.HttpRoutesMiddlewares.cors
+import zio.http.middleware.Cors.*
 
 object Main extends ZIOAppDefault:
 
@@ -19,14 +22,20 @@ object Main extends ZIOAppDefault:
   import domain.AuthenticationLogic
   import output.adapters.*
 
-  val authApp = RestAuthenticationApi.app @@ RequestHandlerMiddlewares.debug
-
   val serverConfig =
     ZLayer:
       for restConfig <- ZIO.service[RestApiConfig]
       yield ServerConfig(
         address = new InetSocketAddress(InetAddress.getByName(restConfig.host), restConfig.port)
       )
+
+  val corsConfig: CorsConfig =
+    CorsConfig(
+      allowedOrigins = _ => true,
+      allowedMethods = Some(Set(Method.GET, Method.POST, Method.PUT, Method.DELETE))
+    )
+
+  val authApp = RestAuthenticationApi.app @@ RequestHandlerMiddlewares.debug @@ cors(corsConfig)
 
   override val run =
     Server
